@@ -60,14 +60,29 @@ where cancellation is null
 group by c.order_id) temp
 
 --For each customer, how many delivered pizzas had at least 1 change and how many had no changes?
-select * from customer_orders c
+with had_changes as (
+select count(c.pizza_id) as had_changes from customer_orders c
 inner join runner_orders r on c.order_id = r.order_id
-where cancellation is null and (exclusions is not null or extras is not null)
-group by customer_id
+where cancellation is null and (exclusions is not null or extras is not null)),
+no_changes as (
+select count(c.pizza_id) as no_changes from customer_orders c
+inner join runner_orders r on c.order_id = r.order_id
+where cancellation is null and (exclusions is null and  extras is null))
+select * from had_changes, no_changes
 
-select * from customer_orders c
+--How many pizzas were delivered that had both exclusions and extras?
+select count(c.pizza_id) as had_changes from customer_orders c
 inner join runner_orders r on c.order_id = r.order_id
-where cancellation is null and (exclusions is null and extras is null)
+where cancellation is null and (exclusions is not null and extras is not null)
+
+--What was the total volume of pizzas ordered for each hour of the day?
+select count(pizza_id) as num_pizza, datepart(month, order_time) as month, datepart(day, order_time) as day,datepart(hour, order_time) as at from customer_orders
+group by datepart(month, order_time), datepart(day, order_time),datepart(hour, order_time)
+
+--What was the volume of orders for each day of the week?
+select count(order_id) as num_pizza, datepart(month, order_time) as month, datepart(day, order_time) as day from customer_orders
+group by datepart(month, order_time), datepart(day, order_time)
+
 
 
 
