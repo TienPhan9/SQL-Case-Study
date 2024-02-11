@@ -66,6 +66,40 @@ round(avg(cast(iif(indexing=0, distance, left(distance, patindex('%[a-z]%', dist
 group by customer_id
 
 --What was the difference between the longest and shortest delivery times for all orders?
+with cte as (
+select duration,  
+patindex('%[a-z]%', duration) as indexing
+from customer_orders c inner join runner_orders r on c.order_id = r.order_id
+where cancellation is null)
+select 
+max(cast(iif(indexing=0, duration, left(duration, patindex('%[a-z]%', duration)-1)) as float))
+- min(cast(iif(indexing=0, duration, left(duration, patindex('%[a-z]%', duration)-1)) as float))
+from cte
+
+--What was the average speed for each runner for each delivery and do you notice any trend for these values?
+with cte as (
+select runner_id, order_id,
+cast(iif(patindex('%[a-z]%', distance)=0, distance, left(distance, patindex('%[a-z]%', distance)-1)) as float) as distance, 
+cast(iif(patindex('%[a-z]%', duration)=0, duration, left(duration, patindex('%[a-z]%', duration)-1)) as float) as duration
+from runner_orders
+where cancellation is null)
+select runner_id, order_id, round(avg(distance / duration),2) as avg_speed from cte
+group by runner_id, order_id
+
+--What is the successful delivery percentage for each runner?
+
+select target.runner_id, concat(cast((cast(total_actual as float) / cast(total_estimated as float)) * 100 as nvarchar),'%') as successful_percentage from (
+(select runner_id, count(order_id) as total_estimated from runner_orders
+group by runner_id) as target inner join
+
+(select runner_id, count(order_id) as total_actual from runner_orders
+where cancellation is null
+group by runner_id) as actual
+on target.runner_id = actual.runner_id)
+
+
+
+
 
 
 
